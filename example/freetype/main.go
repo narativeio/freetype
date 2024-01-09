@@ -25,7 +25,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/goki/freetype"
+	"github.com/narativeio/freetype"
 	"golang.org/x/image/font"
 )
 

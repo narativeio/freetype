@@ -1,4 +1,4 @@
-module github.com/goki/freetype
+module github.com/narativeio/freetype
 
 go 1.18
 

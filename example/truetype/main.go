@@ -19,7 +19,7 @@ import (
 	"io/ioutil"
 	"log"
 
-	"github.com/goki/freetype/truetype"
+	"github.com/narativeio/freetype/truetype"
 	"golang.org/x/image/font"
 	"golang.org/x/image/math/fixed"
 )
