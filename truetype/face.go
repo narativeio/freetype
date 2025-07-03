@@ -8,6 +8,7 @@ package truetype
 import (
 	"image"
 	"math"
+	"sync"
 
 	"github.com/narativeio/freetype/raster"
 	"golang.org/x/image/font"
@@ -239,26 +240,27 @@ func NewFace(f *Font, opts *Options) IndexableFace {
 }
 
 type face struct {
-	f             *Font
-	hinting       font.Hinting
-	scale         fixed.Int26_6
-	subPixelX     uint32
-	subPixelBiasX fixed.Int26_6
-	subPixelMaskX fixed.Int26_6
-	subPixelY     uint32
-	subPixelBiasY fixed.Int26_6
-	subPixelMaskY fixed.Int26_6
-	stroke        fixed.Int26_6
-	masks         *image.Alpha
-	glyphCache    []glyphCacheEntry
-	r             raster.Rasterizer
-	p             raster.Painter
-	paintOffset   int
-	maxw          int
-	maxh          int
-	glyphBuf      GlyphBuf
-	indexCache    [indexCacheLen]indexCacheEntry
-	advanceCache  map[rune]fixed.Int26_6
+	f                 *Font
+	hinting           font.Hinting
+	scale             fixed.Int26_6
+	subPixelX         uint32
+	subPixelBiasX     fixed.Int26_6
+	subPixelMaskX     fixed.Int26_6
+	subPixelY         uint32
+	subPixelBiasY     fixed.Int26_6
+	subPixelMaskY     fixed.Int26_6
+	stroke            fixed.Int26_6
+	masks             *image.Alpha
+	glyphCache        []glyphCacheEntry
+	r                 raster.Rasterizer
+	p                 raster.Painter
+	paintOffset       int
+	maxw              int
+	maxh              int
+	glyphBuf          GlyphBuf
+	indexCache        [indexCacheLen]indexCacheEntry
+	advanceCache      map[rune]fixed.Int26_6
+	advanceCacheMutex sync.Mutex
 
 	// TODO: clip rectangle?
 }
@@ -387,10 +389,12 @@ func (a *face) GlyphBounds(r rune) (bounds fixed.Rectangle26_6, advance fixed.In
 }
 
 func (a *face) GlyphAdvance(r rune) (advance fixed.Int26_6, ok bool) {
+	a.advanceCacheMutex.Lock()
 	if a.advanceCache == nil {
 		a.advanceCache = make(map[rune]fixed.Int26_6, 1024)
 	}
 	advance, ok = a.advanceCache[r]
+	a.advanceCacheMutex.Unlock()
 	if ok {
 		idx := a.index(r)
 		return advance, (idx != 0)
@@ -399,7 +403,9 @@ func (a *face) GlyphAdvance(r rune) (advance fixed.Int26_6, ok bool) {
 	if err := a.glyphBuf.Load(a.f, a.scale, idx, a.hinting); err != nil {
 		return 0, false
 	}
+	a.advanceCacheMutex.Lock()
 	a.advanceCache[r] = a.glyphBuf.AdvanceWidth
+	a.advanceCacheMutex.Unlock()
 	return a.glyphBuf.AdvanceWidth, (idx != 0)
 }
 
